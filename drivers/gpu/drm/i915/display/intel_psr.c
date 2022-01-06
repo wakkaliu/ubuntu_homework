@@ -22,6 +22,7 @@
  */
 
 #include <drm/drm_atomic_helper.h>
+#include <linux/dmi.h>
 
 #include "display/intel_dp.h"
 
@@ -1559,6 +1560,48 @@ void intel_psr_flush(struct drm_i915_private *dev_priv,
 	mutex_unlock(&dev_priv->psr.lock);
 }
 
+static int intel_psr_enable_detect_dmi_callback(const struct dmi_system_id *id)
+{
+	DRM_INFO("Enable psr for %s\n", id->ident);
+	return 1;
+}
+
+static const struct dmi_system_id intel_enable_psr_detect[] = {
+	{
+		.callback = intel_psr_enable_detect_dmi_callback,
+		.ident = "Dell XPS 15 9560",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "XPS 15 9560"),
+		},
+	},
+	{
+		.callback = intel_psr_enable_detect_dmi_callback,
+		.ident = "Dell XPS 13 9360",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "XPS 13 9360"),
+		},
+	},
+	{
+		.callback = intel_psr_enable_detect_dmi_callback,
+		.ident = "Dell XPS 15 9570",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "XPS 15 9570"),
+		},
+	},
+	{
+		.callback = intel_psr_enable_detect_dmi_callback,
+		.ident = "Dell XPS 13 9370",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "XPS 13 9370"),
+		},
+	},
+	{ }
+};
+
 /**
  * intel_psr_init - Init basic PSR work and mutex.
  * @dev_priv: i915 device private
@@ -1581,6 +1624,10 @@ void intel_psr_init(struct drm_i915_private *dev_priv)
 		 * in transcoder space results in the right offset for HSW
 		 */
 		dev_priv->hsw_psr_mmio_adjust = _SRD_CTL_EDP - _HSW_EDP_PSR_BASE;
+
+	/* Enable psr for specific devices */
+	if (dmi_check_system(intel_enable_psr_detect))
+		dev_priv->params.enable_psr = 1;
 
 	if (dev_priv->params.enable_psr == -1)
 		if (INTEL_GEN(dev_priv) < 9 || !dev_priv->vbt.psr.enable)
